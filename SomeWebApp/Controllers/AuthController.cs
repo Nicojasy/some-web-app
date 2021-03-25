@@ -7,6 +7,7 @@ using SomeWebApp.Application.Checker;
 using SomeWebApp.Application.Interfaces;
 using SomeWebApp.Core.Auth;
 using SomeWebApp.Core.Entities;
+using SomeWebApp.LogExtension;
 using SomeWebApp.Models.Auth;
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,7 @@ using System.Threading.Tasks;
 namespace SomeWebApp.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/auth")]
     public class AuthController : ControllerBase
     {
         private readonly ILogger<AuthController> _logger;
@@ -24,10 +25,10 @@ namespace SomeWebApp.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IAuthService _authService;
         private readonly IPasswordHasher _passwordHasher;
-        private readonly IChecker _checker;
+        private readonly IEnteredDataChecker _checker;
 
         public AuthController(ILogger<AuthController> logger, IConfiguration configuration, IUnitOfWork unitOfWork,
-            IAuthService authService, IPasswordHasher passwordHasher, IChecker checker)
+            IAuthService authService, IPasswordHasher passwordHasher, IEnteredDataChecker checker)
         {
             _logger = logger;
             _configuration = configuration;
@@ -48,6 +49,7 @@ namespace SomeWebApp.Controllers
             var foundUsers = await _unitOfWork.Users.GetCountUsersByNicknameOrEmailAsync(signup_dto.nickname, signup_dto.email);
             if (foundUsers != default)
             {
+                // TODO: nickname or email exists?
                 return BadRequest("User exists");
             }
 
@@ -57,7 +59,8 @@ namespace SomeWebApp.Controllers
             var affectedRows = await _unitOfWork.Users.AddAsync(newUser);
             if (affectedRows == 0)
             {
-                // TODO: log
+                _logger.WarnDatabaseQueryReturnedZeroAffectedRows($"Add user => user_nickname: '{signup_dto.nickname}', user_email: '{signup_dto.email}', user_password: '{signup_dto.password}', user_passwordHash: '{passwordHash}'");
+                return BadRequest();
             }
 
             return Ok();
@@ -73,23 +76,38 @@ namespace SomeWebApp.Controllers
 
             var user = await _unitOfWork.Users.GetByLoginAsync(login_dto.login);
 
-            // TODO: password verification is 401
-            if (user == null ||
-                !_passwordHasher.Check(user.Password, login_dto.password).Verified)
+            if (user == null)
             {
                 return Unauthorized();
             }
 
-            //var roles = await _unitOfWork.Roles.GetRoleNamesByUserIDAsync(user.ID);
+            try
+            {
+                var check = _passwordHasher.Check(user.Password, login_dto.password);
 
+                // TODO: if necessary, add a counter of attempts to change the password
+                if (!check.Verified)
+                {
+                    if (check.NeedsUpgrade)
+                        _logger.WarnNeedsUpgrade($"Needs upgrade password => user_password: {user.Password}");
+
+                    return Unauthorized();
+                }
+            }
+            catch (FormatException ex)
+            {
+                _logger.WarnBadPasswordFormatWithException(user.Password, ex);
+                return BadRequest();
+            }
+            
+            // TODO: null return?
+            var scopes = await _unitOfWork.Roles.GetPermissionNamesByUserIDAsync(user.ID);
+            
             var claims = new List<Claim>
             {
                 new Claim(ClaimsIdentity.DefaultNameClaimType, user.Nickname),
+                new Claim("scope", scopes != null ? string.Join(' ', scopes) : string.Empty)
             };
-            //add:role
-            //edit:role
-            //delete:role
-            //claims.AddRange(roles.Select(role => new Claim(ClaimsIdentity.DefaultRoleClaimType, role)));
 
             var newTokens = new TokensModel(
                 _authService.GenerateAccessToken(claims),
@@ -101,8 +119,14 @@ namespace SomeWebApp.Controllers
             // TODO: temporarily
             await _unitOfWork.RefreshSessions.DeleteAllByUserIDAsync(user.ID);
 
-            await _unitOfWork.RefreshSessions.AddAsync(newRefreshSession);
-            
+            var affectedRows = await _unitOfWork.RefreshSessions.AddAsync(newRefreshSession);
+
+            if (affectedRows == 0)
+            {
+                _logger.WarnDatabaseQueryReturnedZeroAffectedRows($"Add refresh_session => id_user: '{newRefreshSession.ID_User}', refresh_token: '{newRefreshSession.RefreshToken}', CreationTimestamp: '{newRefreshSession.CreationTimestamp}'");
+                return BadRequest();
+            }
+
             return Ok(newTokens);
         }
         
@@ -125,22 +149,32 @@ namespace SomeWebApp.Controllers
                 return BadRequest("Invalid client request");
             }
 
+            // TODO: improve the code
+            //delete
             var session = await _unitOfWork.RefreshSessions.GetByNicknameAndRefreshTokenAsync(nickname, refreshToken);
             
             if (session == null ||
-                session.CreationTimestamp.AddDays(_configuration.GetValue<double>("Tokens:Lifecycle:RefreshToken.days")) <= DateTimeOffset.UtcNow)
+                session.CreationTimestamp.AddDays(_configuration.GetValue<int>("Tokens:Lifecycle:RefreshToken.days")) <= DateTimeOffset.UtcNow)
             {
                 return BadRequest("Invalid refresh session");
             }
-            
+            //update
+            await _unitOfWork.RefreshSessions.DeleteAsync(session.ID);
+
             TokensModel newTokens = new TokensModel(
                 _authService.GenerateAccessToken(principal.Claims),
                 _authService.GenerateRefreshToken());
 
-            RefreshSessionModel newRefreshSession = new RefreshSessionModel(session.ID_User, newTokens.RefreshToken, newTokens.CreationTimestamp);
+            RefreshSessionModel newRefreshSession =
+                new RefreshSessionModel(session.ID_User, newTokens.RefreshToken, newTokens.CreationTimestamp);
 
-            await _unitOfWork.RefreshSessions.DeleteAsync(session.ID);
-            await _unitOfWork.RefreshSessions.AddAsync(newRefreshSession);
+            var affectedRows = await _unitOfWork.RefreshSessions.AddAsync(newRefreshSession);
+
+            if (affectedRows == 0)
+            {
+                _logger.WarnDatabaseQueryReturnedZeroAffectedRows($"Add refresh_session => id_user: '{session.ID_User}', refresh_token: '{session.RefreshToken}', creation_timestamp: '{session.CreationTimestamp}'");
+                return BadRequest();
+            }
 
             return new ObjectResult(newTokens);
         }
@@ -150,19 +184,22 @@ namespace SomeWebApp.Controllers
         public async Task<IActionResult> Signout([FromBody] string refresh_token)
         {
             var nickname = User.Identity.Name;
-            
+
+            // TODO: improve the code
+            //delete
             var session = await _unitOfWork.RefreshSessions.GetByNicknameAndRefreshTokenAsync(nickname, refresh_token);
             
             if (session == null ||
-                session.CreationTimestamp.AddDays(_configuration.GetValue<double>("Tokens:Lifecycle:RefreshToken.days")) <= DateTimeOffset.UtcNow)
+                session.CreationTimestamp.AddDays(_configuration.GetValue<int>("Tokens:Lifecycle:RefreshToken.days")) <= DateTimeOffset.UtcNow)
             {
                 return BadRequest("Invalid client request");
             }
-
+            //update
             var affectedRows = await _unitOfWork.RefreshSessions.DeleteByUserIDAndRefreshTokenAsync(session.ID_User, session.RefreshToken);
             
             if (affectedRows == 0)
             {
+                _logger.InfoDatabaseQueryReturnedZeroAffectedRows($"Delete refresh_session => id_user: '{session.ID_User}', refresh_token: '{session.RefreshToken}', creation_timestamp: '{session.CreationTimestamp}'");
                 return BadRequest("Session not found");
             }
 

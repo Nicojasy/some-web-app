@@ -92,7 +92,7 @@ namespace SomeWebApp.Infrastructure.Repository
                     entity.Password,
                     entity.Nickname,
                     entity.Bio,
-                    entity.Photo,
+                    entity.ID_Photo,
                     entity.IsDeleted,
                     RegistrationTimestamp = entity.RegistrationTimestamp.ToString("yyyy-MM-dd HH:mm:ss")
                 });
@@ -115,21 +115,56 @@ namespace SomeWebApp.Infrastructure.Repository
                     entity.Password,
                     entity.Nickname,
                     entity.Bio,
-                    entity.Photo,
+                    entity.ID_Photo,
                     entity.IsDeleted,
                     RegistrationTimestamp = entity.RegistrationTimestamp.ToString("yyyy-MM-dd HH:mm:ss")
                 });
 
             return result;
         }
-        public async Task<int> UpdateIsDeletedAsync(int id, bool isDeleted)
+
+        public async Task<int> UpdateIsDeletedAsync(UInt64 id, bool isDeleted)
         {
-            var sql = "INSERT INTO users (IsDeleted) VALUES (@isDeleted) " +
+            var sql = "UPDATE users SET IsDeleted = @isDeleted " +
                 "WHERE ID = @id and IsDeleted != @isDeleted;";
 
             using var connection = new MySqlConnection(connectionString);
             connection.Open();
             var result = await connection.ExecuteAsync(sql, new { id, isDeleted });
+
+            return result;
+        }
+
+        public async Task<int> UpdateIsDeletedAsync(string nickname, bool isDeleted)
+        {
+            var sql = "UPDATE users SET IsDeleted = @isDeleted " +
+                "WHERE Nickname = @nickname and IsDeleted != @isDeleted;";
+
+            using var connection = new MySqlConnection(connectionString);
+            connection.Open();
+            var result = await connection.ExecuteAsync(sql, new { nickname, isDeleted });
+
+            return result;
+        }
+
+        public async Task<int> UpdatePasswordAsync(UInt64 user_id, string new_password)
+        {
+            var sql = "UPDATE users SET Password = @new_password WHERE ID = @user_id;";
+
+            using var connection = new MySqlConnection(connectionString);
+            connection.Open();
+            var result = await connection.ExecuteAsync(sql, new { user_id, new_password});
+
+            return result;
+        }
+
+        public async Task<int> UpdateBioAsync(UInt64 user_id, string new_bio)
+        {
+            var sql = "UPDATE users SET Bio = @new_bio WHERE ID = @user_id;";
+
+            using var connection = new MySqlConnection(connectionString);
+            connection.Open();
+            var result = await connection.ExecuteAsync(sql, new { user_id, new_bio });
 
             return result;
         }

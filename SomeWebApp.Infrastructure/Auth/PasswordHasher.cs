@@ -41,7 +41,6 @@ namespace SomeWebApp.Infrastructure.Auth
         {
             var parts = hash.Split('.', 3);
 
-            //FIXME: exception
             if (parts.Length != 3)
             {
                 throw new FormatException("Unexpected hash format. " +
