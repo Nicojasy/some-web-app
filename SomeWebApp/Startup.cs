@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SomeWebApp.Infrastructure;
+using SomeWebApp.Scope;
 using System.Text;
 
 namespace SomeWebApp
@@ -28,7 +30,10 @@ namespace SomeWebApp
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "SomeWebApp", Version = "v1" });
             });
             services.AddInfrastructure(Configuration);
-            
+            //ILoggerFactory loggerFactory = null;
+            //loggerFactory.AddFile("Logs/somewebapp-{Date}.txt");
+
+            //string domain = $"{Configuration["Tokens:Domain"]}/";
             services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -37,6 +42,7 @@ namespace SomeWebApp
             })
             .AddJwtBearer(options =>
             {
+                //options.Authority = Configuration["Tokens:Issuer"];
                 options.SaveToken = true;
                 options.RequireHttpsMetadata = false;
                 options.TokenValidationParameters = new TokenValidationParameters()
@@ -45,12 +51,15 @@ namespace SomeWebApp
                     ValidIssuer = Configuration["Tokens:Issuer"],
                     ValidateAudience = true,
                     ValidAudience = Configuration["Tokens:Audience"],
-
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Tokens:Secret"]))
                 };
             });
+
+            services.AddSingleton<IAuthorizationPolicyProvider, AuthorizationPolicyProvider>();
+            services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
+            services.AddAuthorization();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

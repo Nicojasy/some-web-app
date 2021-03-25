@@ -1,6 +1,6 @@
 ﻿namespace SomeWebApp.Application.Checker
 {
-    public interface IChecker
+    public interface IEnteredDataChecker
     {
         bool CheckNicknameAndEmailAndPassword(string nickname, string email, string password);
         bool CheckNickname(string nickname);

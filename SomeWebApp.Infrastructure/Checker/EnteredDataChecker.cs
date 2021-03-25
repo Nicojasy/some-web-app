@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace SomeWebApp.Infrastructure.Checker
 {
-    public class EnteredDataChecker : IChecker
+    public class EnteredDataChecker : IEnteredDataChecker
     {
         public bool CheckNicknameAndEmailAndPassword(string nickname, string email, string password)
         {
