@@ -18,9 +18,10 @@ namespace SomeWebApp.Infrastructure
             //registration
             services.AddTransient<IPasswordHasher, PasswordHasher>();
             //checker
-            services.AddSingleton<IChecker, EnteredDataChecker>();
-
+            services.AddSingleton<IEnteredDataChecker, EnteredDataChecker>();
+            
             //unitofwork
+            services.AddTransient<IFileRepository, FileRepository>();
             services.AddTransient<IUserRepository, UserRepository>();
             services.AddTransient<IRefreshSessionRepository, RefreshSessionRepository>();
             services.AddTransient<IRoleRepository, RoleRepository>();

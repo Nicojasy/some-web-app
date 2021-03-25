@@ -9,16 +9,28 @@ grant all privileges on `somedb`.* to `app`@`localhost`;
 flush privileges;
 
 -- main tables
+create table `files` (
+  `ID` bigint unsigned not null auto_increment,
+  `Name` varchar(255) not null,
+  `MachineName` varchar(255) not null,
+  `Path` varchar(255) not null,
+  `Extension` varchar(255) not null,
+  `Size` int not null,
+  `UploadTimestamp` timestamp not null,
+  primary key (`ID`)
+);
+
 create table `users` (
   `ID` bigint unsigned not null auto_increment,
+  `ID_Photo` bigint unsigned,
   `Email` varchar(255) not null,
   `Password` varchar(255) not null,
   `Nickname` varchar(255) not null,
   `BIO` text not null,
-  `Photo` varchar(255),
   `IsDeleted` boolean not null,
   `RegistrationTimestamp` timestamp not null,
-  primary key (`ID`)
+  primary key (`ID`),
+  foreign key (`ID_Photo`) references `photos` (`ID`)
 );
 
 create table `roles` (

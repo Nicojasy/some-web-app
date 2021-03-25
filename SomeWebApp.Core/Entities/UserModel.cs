@@ -10,18 +10,18 @@ namespace SomeWebApp.Core.Entities
             Nickname = nickname;
             Password = password;
             Email = email;
-            Bio = "";
-            Photo = default;
+            Bio = string.Empty;
+            ID_Photo = default;
             IsDeleted = false;
             RegistrationTimestamp = DateTimeOffset.UtcNow;
         }
-        public UserModel(string nickname, string email, string password, string bio, string photo)
+        public UserModel(string nickname, string email, string password, string bio, UInt64 id_photo)
         {
             Nickname = nickname;
             Password = password;
             Email = email;
-            Bio = "My Bio";
-            Photo = photo;
+            Bio = bio;
+            ID_Photo = id_photo;
             IsDeleted = false;
             RegistrationTimestamp = DateTimeOffset.UtcNow;
         }
@@ -31,7 +31,7 @@ namespace SomeWebApp.Core.Entities
         public string Password { get; set; }
         public string Nickname { get; set; }
         public string Bio { get; set; }
-        public string Photo { get; set; }
+        public UInt64 ID_Photo { get; set; }
         public bool IsDeleted { get; set; }
         public DateTimeOffset RegistrationTimestamp { get; set; }
     }
