@@ -13,7 +13,7 @@ namespace SomeWebApp.Application.Interfaces
         Task<IEnumerable<string>> GetPermissionNamesByUserIDAsync(UInt64 user_id);
         Task<IEnumerable<PermissionModel>> GetPermissionsByUserIDAsync(UInt64 user_id);
         Task<IEnumerable<RoleModel>> GetRolesByUserIDAsync(UInt64 user_id);
-        Task<IEnumerable<RoleWithPermissionsModel>> GetRolesWithPerissionsByUserIDAsync(UInt64 user_id);
+        Task<IEnumerable<RoleWithPermissionsModel>> GetRolesWithPermissionsByUserIDAsync(UInt64 user_id);
         Task<PermissionModel> GetPermissionByIDAsync(UInt64 permission_id);
         Task<PermissionModel> GetPermissionByNameAsync(string name);
         Task<IEnumerable<string>> GetRoleNamesByUserIDAsync(UInt64 user_id);

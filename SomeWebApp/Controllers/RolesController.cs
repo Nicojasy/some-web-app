@@ -24,6 +24,18 @@ namespace SomeWebApp.Controllers
             _unitOfWork = unitOfWork;
         }
 
+        [HttpGet, Route("")]
+        public async Task<IActionResult> GetRolesWithPermissions()
+        {
+            var role = await _unitOfWork.Roles.GetRolesWithPermissionsAsync(role_id);
+            if (role == null)
+            {
+                // TODO: log
+                _logger.InfoDatabaseQueryReturnedNull($"Get role by id => role_id: '{role_id}'");
+                return BadRequest();
+            }
+            return Ok(role);
+        }
 
         [HttpGet, Route("{role_id}")]
         public async Task<IActionResult> GetRole(UInt64 role_id)
@@ -35,6 +47,19 @@ namespace SomeWebApp.Controllers
                 return BadRequest();
             }
             return Ok(role);
+        }
+
+        [HttpGet, Route("permissions")]
+        public async Task<IActionResult> GetPermissions()
+        {
+            var permission = await _unitOfWork.Roles.GetPermissionsAsync(permission_id);
+            if (permission == null)
+            {
+                // TODO: log
+                _logger.InfoDatabaseQueryReturnedNull($"Get permission by id => permission_id: '{permission_id}'");
+                return BadRequest();
+            }
+            return Ok(permission);
         }
 
         [HttpPost, Route("createrole")]

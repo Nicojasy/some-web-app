@@ -90,7 +90,7 @@ namespace SomeWebApp.Infrastructure.Repository
         }
 
         // FIXME: fix GetRolesWithPermissionsByUserIDAsync()
-        public async Task<IEnumerable<RoleWithPermissionsModel>> GetRolesWithPerissionsByUserIDAsync(UInt64 user_id)
+        public async Task<IEnumerable<RoleWithPermissionsModel>> GetRolesWithPermissionsByUserIDAsync(UInt64 user_id)
         {
             /*
             var query = @"

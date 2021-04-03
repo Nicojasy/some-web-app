@@ -28,10 +28,12 @@ namespace SomeWebApp.Controllers
         }
 
         [HttpGet, Route("")]
-        public async Task<IActionResult> GetUsers()
+        public async Task<IActionResult> GetUsers(ParsingUserDto user)
         {
             // TODO: pagination
 
+
+            // TODO: log
             return Ok(/*users*/);
         }
 
@@ -50,7 +52,7 @@ namespace SomeWebApp.Controllers
         [HttpGet, Route("{user_id}/roleswithpermissions")]
         public async Task<IActionResult> GetRolesWithPermissionsOfUser(UInt64 user_id)
         {
-            var rolesWithPermissions = await _unitOfWork.Roles.GetRolesWithPerissionsByUserIDAsync(user_id);
+            var rolesWithPermissions = await _unitOfWork.Roles.GetRolesWithPermissionsByUserIDAsync(user_id);
             if (rolesWithPermissions == null)
             {
                 return Ok();
@@ -98,8 +100,7 @@ namespace SomeWebApp.Controllers
         }
 
         [HttpPost, Route("{user_id}/newpassword")]
-        public async Task<IActionResult> NewPasswordOfUser(UInt64 user_id,
-            [FromBody] ChangePasswordDto password_dto)
+        public async Task<IActionResult> NewPasswordOfUser(UInt64 user_id, [FromBody] ChangePasswordDto password_dto)
         {
             var user = await _unitOfWork.Users.GetByIdAsync(user_id);
 
